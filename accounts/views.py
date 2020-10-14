@@ -1,15 +1,19 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
-from accounts.models import *
-from .forms import OrderForm, CustomerForm, CreateUserForm
-from .filters import OrderFilter
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.contrib import messages
+from django.contrib.auth.models import Group
+
+
+from .forms import OrderForm, CustomerForm, CreateUserForm
+from .filters import OrderFilter
+from .decorators import unauthenticated_user, allowed_users, admin_only
+from accounts.models import *
 
 
 # Create your views here.
-
+@unauthenticated_user
 def rigistrationPage(request):
     # if request.user.is_authenticated:
     #     return redirect('/')
@@ -18,13 +22,17 @@ def rigistrationPage(request):
     if request.method == 'POST':
         form = CreateUserForm(request.POST)
         if form.is_valid():
-            form.save()
-            user = form.cleaned_data.get('username')
-            messages.success(request, 'Account has Created For ' + user)
+            user = form.save()
+            username = form.cleaned_data.get('username')
+
+            group = Group.objects.get(name='customers')
+            user.groups.add(group)
+
+            messages.success(request, 'Account has Created For ' + username)
             return redirect('/login/')
     context = {'form':form}
     return render(request,'accounts/registration.html', context)
-
+@unauthenticated_user
 def loginPage(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -45,6 +53,7 @@ def logoutUser(request):
     return redirect('/login/')
 
 @login_required(login_url='/login/')
+@admin_only
 def index(request):
     customers = Customer.objects.all()
     orders = Order.objects.all()
@@ -60,12 +69,14 @@ def index(request):
     return render(request,'accounts/dashboard.html', context)
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def products(request):
     product = Product.objects.all()
     context={'product':product}
     return render(request,'accounts/products.html', context)
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def customers(request, pk):
     customer = Customer.objects.get(id=pk)
     orders = customer.order_set.all()
@@ -78,6 +89,7 @@ def customers(request, pk):
     return render(request,'accounts/customers.html', context)
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def createOrder(request, pk):
     customer = Customer.objects.get(id=pk)
 
@@ -93,6 +105,7 @@ def createOrder(request, pk):
 
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def updateOrder(request, pk):
     order = Order.objects.get(id=pk)
     form = OrderForm(instance=order)
@@ -107,6 +120,7 @@ def updateOrder(request, pk):
     return render(request, 'accounts/order_form.html', context)
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def deleteOrder(request, pk):
     order = Order.objects.get(id=pk)
     if request.method == 'POST':
@@ -117,6 +131,7 @@ def deleteOrder(request, pk):
     return render(request, 'accounts/delete.html', context)
 
 @login_required(login_url='/login/')
+@allowed_users(allowed_roles=['admin'])
 def createCustomer(request):
     form = CustomerForm()
 
@@ -127,3 +142,7 @@ def createCustomer(request):
             return redirect('/')
     context={'form':form}
     return render(request, 'accounts/Customer_form.html', context)
+
+def userPage(request):
+    context = {}
+    return render (request, 'accounts/user_page.html', context)
