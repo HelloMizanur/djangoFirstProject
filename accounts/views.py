@@ -5,6 +5,7 @@ from .forms import OrderForm, CustomerForm, CreateUserForm
 from .filters import OrderFilter
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 
 
 # Create your views here.
@@ -39,6 +40,11 @@ def loginPage(request):
     context = {}
     return render(request,'accounts/login.html', context)
 
+def logoutUser(request):
+    logout(request)
+    return redirect('/login/')
+
+@login_required(login_url='/login/')
 def index(request):
     customers = Customer.objects.all()
     orders = Order.objects.all()
@@ -53,13 +59,13 @@ def index(request):
     'pending':pending, 'delivered':delivered}
     return render(request,'accounts/dashboard.html', context)
 
-
+@login_required(login_url='/login/')
 def products(request):
     product = Product.objects.all()
     context={'product':product}
     return render(request,'accounts/products.html', context)
 
-
+@login_required(login_url='/login/')
 def customers(request, pk):
     customer = Customer.objects.get(id=pk)
     orders = customer.order_set.all()
@@ -71,7 +77,7 @@ def customers(request, pk):
     context={'customer':customer, 'orders':orders, 'order_count':order_count, 'myFilter':myFilter}
     return render(request,'accounts/customers.html', context)
 
-
+@login_required(login_url='/login/')
 def createOrder(request, pk):
     customer = Customer.objects.get(id=pk)
 
@@ -86,7 +92,7 @@ def createOrder(request, pk):
     return render(request, 'accounts/order_form.html', context)
 
 
-
+@login_required(login_url='/login/')
 def updateOrder(request, pk):
     order = Order.objects.get(id=pk)
     form = OrderForm(instance=order)
@@ -100,7 +106,7 @@ def updateOrder(request, pk):
     context = {'form':form}
     return render(request, 'accounts/order_form.html', context)
 
-
+@login_required(login_url='/login/')
 def deleteOrder(request, pk):
     order = Order.objects.get(id=pk)
     if request.method == 'POST':
@@ -110,7 +116,7 @@ def deleteOrder(request, pk):
     context={'item':order}
     return render(request, 'accounts/delete.html', context)
 
-
+@login_required(login_url='/login/')
 def createCustomer(request):
     form = CustomerForm()
 
