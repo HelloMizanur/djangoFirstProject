@@ -1,11 +1,43 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from accounts.models import *
-from .forms import OrderForm
+from .forms import OrderForm, CustomerForm, CreateUserForm
 from .filters import OrderFilter
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
 
 
 # Create your views here.
+
+def rigistrationPage(request):
+    # if request.user.is_authenticated:
+    #     return redirect('/')
+    # else:
+    form = CreateUserForm()
+    if request.method == 'POST':
+        form = CreateUserForm(request.POST)
+        if form.is_valid():
+            form.save()
+            user = form.cleaned_data.get('username')
+            messages.success(request, 'Account has Created For ' + user)
+            return redirect('/login/')
+    context = {'form':form}
+    return render(request,'accounts/registration.html', context)
+
+def loginPage(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            return redirect('/')
+        else:
+            messages.info(request, 'Username Or Password Is Incorrect')
+    context = {}
+    return render(request,'accounts/login.html', context)
 
 def index(request):
     customers = Customer.objects.all()
@@ -23,12 +55,13 @@ def index(request):
 
 
 def products(request):
-    context={}
+    product = Product.objects.all()
+    context={'product':product}
     return render(request,'accounts/products.html', context)
 
 
-def customers(request, pk_customer):
-    customer = Customer.objects.get(id=pk_customer)
+def customers(request, pk):
+    customer = Customer.objects.get(id=pk)
     orders = customer.order_set.all()
     order_count = orders.count()
 
@@ -76,3 +109,15 @@ def deleteOrder(request, pk):
 
     context={'item':order}
     return render(request, 'accounts/delete.html', context)
+
+
+def createCustomer(request):
+    form = CustomerForm()
+
+    if request.method == 'POST':
+        form = CustomerForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    context={'form':form}
+    return render(request, 'accounts/Customer_form.html', context)
