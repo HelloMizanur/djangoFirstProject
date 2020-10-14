@@ -28,6 +28,11 @@ def rigistrationPage(request):
             group = Group.objects.get(name='customers')
             user.groups.add(group)
 
+            Customer.objects.create(
+                user=user,
+                name=user.username,
+            )
+
             messages.success(request, 'Account has Created For ' + username)
             return redirect('/login/')
     context = {'form':form}
@@ -130,6 +135,18 @@ def deleteOrder(request, pk):
     context={'item':order}
     return render(request, 'accounts/delete.html', context)
 
+
+@login_required(login_url='/login/')
+@allowed_users(allowed_roles=['customers'])
+def userPage(request):
+    orders = request.user.customer.order_set.all()
+
+    total_orders = orders.count()
+    delivered = orders.filter(status='Delivered').count()
+    pending = orders.filter(status='Pending').count()
+    context = {'orders':orders, 'total_orders':total_orders, 'delivered':delivered, 'pending':pending}
+    return render (request, 'accounts/user_page.html', context)
+
 @login_required(login_url='/login/')
 @allowed_users(allowed_roles=['admin'])
 def createCustomer(request):
@@ -143,6 +160,3 @@ def createCustomer(request):
     context={'form':form}
     return render(request, 'accounts/Customer_form.html', context)
 
-def userPage(request):
-    context = {}
-    return render (request, 'accounts/user_page.html', context)
